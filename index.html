@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #111;
+    }
+
+    .add-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .add-form input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      background: #fff;
+      transition: border-color 0.15s;
+    }
+
+    .add-form input:focus {
+      border-color: #4f7ef7;
+    }
+
+    .add-form button {
+      padding: 10px 18px;
+      background: #4f7ef7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .add-form button:hover {
+      background: #3a6ae8;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: opacity 0.15s;
+    }
+
+    .task.done {
+      opacity: 0.55;
+    }
+
+    .task input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #4f7ef7;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .task-label {
+      flex: 1;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .task.done .task-label {
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #bbb;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover {
+      color: #e55;
+    }
+
+    .empty {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      padding: 32px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>To-Do</h1>
+    <form class="add-form" id="addForm">
+      <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off">
+      <button type="submit">Add</button>
+    </form>
+    <div class="task-list" id="taskList"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'todo-tasks';
+
+    function loadTasks() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    let tasks = loadTasks();
+
+    function render() {
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+
+      if (tasks.length === 0) {
+        list.innerHTML = '<p class="empty">No tasks yet. Add one above.</p>';
+        return;
+      }
+
+      tasks.forEach((task, i) => {
+        const item = document.createElement('div');
+        item.className = 'task' + (task.done ? ' done' : '');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.done;
+        checkbox.addEventListener('change', () => {
+          tasks[i].done = checkbox.checked;
+          saveTasks(tasks);
+          render();
+        });
+
+        const label = document.createElement('span');
+        label.className = 'task-label';
+        label.textContent = task.text;
+
+        const del = document.createElement('button');
+        del.className = 'delete-btn';
+        del.textContent = '✕';
+        del.title = 'Delete';
+        del.addEventListener('click', () => {
+          tasks.splice(i, 1);
+          saveTasks(tasks);
+          render();
+        });
+
+        item.append(checkbox, label, del);
+        list.appendChild(item);
+      });
+    }
+
+    document.getElementById('addForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('taskInput');
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ text, done: false });
+      saveTasks(tasks);
+      input.value = '';
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
