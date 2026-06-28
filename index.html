@@ -66,6 +66,35 @@
       background: #3a6ae8;
     }
 
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      background: none;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      color: #888;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .filter-btn:hover {
+      border-color: #4f7ef7;
+      color: #4f7ef7;
+    }
+
+    .filter-btn.active {
+      background: #4f7ef7;
+      border-color: #4f7ef7;
+      color: #fff;
+    }
+
     .task-list {
       display: flex;
       flex-direction: column;
@@ -158,6 +187,11 @@
       <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off">
       <button type="submit">Add</button>
     </form>
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="active">Active</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+    </div>
     <div class="task-list" id="taskList"></div>
     <button class="clear-completed" id="clearCompleted">Clear completed</button>
   </div>
@@ -178,6 +212,7 @@
     }
 
     let tasks = loadTasks();
+    let filter = 'all';
 
     function render() {
       const list = document.getElementById('taskList');
@@ -192,6 +227,9 @@
       }
 
       tasks.forEach((task, i) => {
+        if (filter === 'active' && task.done) return;
+        if (filter === 'completed' && !task.done) return;
+
         const item = document.createElement('div');
         item.className = 'task' + (task.done ? ' done' : '');
 
@@ -221,7 +259,20 @@
         item.append(checkbox, label, del);
         list.appendChild(item);
       });
+
+      if (list.children.length === 0) {
+        list.innerHTML = '<p class="empty">No ' + filter + ' tasks.</p>';
+      }
     }
+
+    document.getElementById('filters').addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      filter = btn.dataset.filter;
+      document.querySelectorAll('.filter-btn').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      render();
+    });
 
     document.getElementById('clearCompleted').addEventListener('click', () => {
       tasks = tasks.filter(t => !t.done);
