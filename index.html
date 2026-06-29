@@ -136,6 +136,23 @@
       color: #888;
     }
 
+    .calendar-btn {
+      background: none;
+      border: none;
+      color: #bbb;
+      font-size: 1.05rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .calendar-btn:hover {
+      color: #4f7ef7;
+    }
+
     .delete-btn {
       background: none;
       border: none;
@@ -214,6 +231,25 @@
     let tasks = loadTasks();
     let filter = 'all';
 
+    // Build a Google Calendar event-creation URL for a task, as an all-day
+    // event for today. The user can adjust the date/time before saving.
+    function calendarUrl(text) {
+      const d = new Date();
+      const start = d.getFullYear() +
+        String(d.getMonth() + 1).padStart(2, '0') +
+        String(d.getDate()).padStart(2, '0');
+      const next = new Date(d.getTime() + 86400000);
+      const end = next.getFullYear() +
+        String(next.getMonth() + 1).padStart(2, '0') +
+        String(next.getDate()).padStart(2, '0');
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: text,
+        dates: start + '/' + end,
+      });
+      return 'https://calendar.google.com/calendar/render?' + params.toString();
+    }
+
     function render() {
       const list = document.getElementById('taskList');
       list.innerHTML = '';
@@ -246,6 +282,14 @@
         label.className = 'task-label';
         label.textContent = task.text;
 
+        const cal = document.createElement('button');
+        cal.className = 'calendar-btn';
+        cal.textContent = '📅';
+        cal.title = 'Add to calendar';
+        cal.addEventListener('click', () => {
+          window.open(calendarUrl(task.text), '_blank', 'noopener');
+        });
+
         const del = document.createElement('button');
         del.className = 'delete-btn';
         del.textContent = '✕';
@@ -256,7 +300,7 @@
           render();
         });
 
-        item.append(checkbox, label, del);
+        item.append(checkbox, label, cal, del);
         list.appendChild(item);
       });
 
