@@ -213,23 +213,35 @@
     <button class="clear-completed" id="clearCompleted">Clear completed</button>
   </div>
 
-  <script>
-    const STORAGE_KEY = 'todo-tasks';
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    function loadTasks() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      } catch {
-        return [];
-      }
-    }
+    // Publishable (anon) key only — never embed a secret/service-role key here.
+    const SUPABASE_URL = 'https://uydipsmrvpupmbbqdttq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_sLVLd-mdTwT-1dAtPSO-Yg_uOVbxPP5';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function saveTasks(tasks) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    }
-
-    let tasks = loadTasks();
+    // Tasks are mirrored from the `todos` table. Each task is
+    // { id, text, done } where text <- todos.task and done <- todos.is_complete.
+    let tasks = [];
     let filter = 'all';
+
+    function mapRow(row) {
+      return { id: row.id, text: row.task, done: !!row.is_complete };
+    }
+
+    async function loadTasks() {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .order('id', { ascending: true });
+      if (error) {
+        console.error('Failed to load tasks:', error);
+        return;
+      }
+      tasks = data.map(mapRow);
+      render();
+    }
 
     // Build a Google Calendar event-creation URL for a task, as an all-day
     // event for today. The user can adjust the date/time before saving.
@@ -272,9 +284,18 @@
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = task.done;
-        checkbox.addEventListener('change', () => {
-          tasks[i].done = checkbox.checked;
-          saveTasks(tasks);
+        checkbox.addEventListener('change', async () => {
+          const newDone = checkbox.checked;
+          const { error } = await supabase
+            .from('todos')
+            .update({ is_complete: newDone })
+            .eq('id', task.id);
+          if (error) {
+            console.error('Failed to update task:', error);
+            checkbox.checked = !newDone;
+            return;
+          }
+          tasks[i].done = newDone;
           render();
         });
 
@@ -294,9 +315,16 @@
         del.className = 'delete-btn';
         del.textContent = '✕';
         del.title = 'Delete';
-        del.addEventListener('click', () => {
+        del.addEventListener('click', async () => {
+          const { error } = await supabase
+            .from('todos')
+            .delete()
+            .eq('id', task.id);
+          if (error) {
+            console.error('Failed to delete task:', error);
+            return;
+          }
           tasks.splice(i, 1);
-          saveTasks(tasks);
           render();
         });
 
@@ -318,24 +346,40 @@
       render();
     });
 
-    document.getElementById('clearCompleted').addEventListener('click', () => {
+    document.getElementById('clearCompleted').addEventListener('click', async () => {
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('is_complete', true);
+      if (error) {
+        console.error('Failed to clear completed tasks:', error);
+        return;
+      }
       tasks = tasks.filter(t => !t.done);
-      saveTasks(tasks);
       render();
     });
 
-    document.getElementById('addForm').addEventListener('submit', (e) => {
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('taskInput');
       const text = input.value.trim();
       if (!text) return;
-      tasks.push({ text, done: false });
-      saveTasks(tasks);
+      const { data, error } = await supabase
+        .from('todos')
+        .insert({ task: text })
+        .select()
+        .single();
+      if (error) {
+        console.error('Failed to add task:', error);
+        return;
+      }
+      tasks.push(mapRow(data));
       input.value = '';
       render();
     });
 
     render();
+    loadTasks();
   </script>
 </body>
 </html>
